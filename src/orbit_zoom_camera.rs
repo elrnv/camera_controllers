@@ -136,8 +136,16 @@ pub struct OrbitZoomCamera<T=f32> {
     /// Yaw left/right from target
     pub yaw: T,
 
-    /// camera distance from target
+    /// Camera distance from target
     pub distance: T,
+
+    /// Lower distance limit
+    /// Set this to near clipping distance
+    pub distance_near_limit: T,
+
+    /// Upper distance limit
+    /// Set this to far clipping distance
+    pub distance_far_limit: T,
 
     /// Settings for the camera
     pub settings: OrbitZoomCameraSettings<T>,
@@ -149,13 +157,14 @@ pub struct OrbitZoomCamera<T=f32> {
 
 impl<T: Float>
 OrbitZoomCamera<T> {
-
     /// Create a new OrbitZoomCamera targeting the given coordinates
     pub fn new(target: [T; 3], settings: OrbitZoomCameraSettings<T>) -> OrbitZoomCamera<T> {
         OrbitZoomCamera {
             target: target,
             rotation: quaternion::id(),
             distance: T::from_f32(10.0),
+            distance_near_limit: T::from_f32(0.1),
+            distance_far_limit: T::from_f32(1000.0),
             pitch: T::zero(),
             yaw: T::zero(),
             keys: Keys::empty(),
@@ -175,7 +184,7 @@ OrbitZoomCamera<T> {
     }
 
     /// Initialize the camera configuration, such that next call to camera() gives the correct
-    /// camera configuration
+    /// camera rotation
     pub fn init(&mut self) {
         self.control_camera(T::zero(), T::zero());
     }
@@ -190,8 +199,8 @@ OrbitZoomCamera<T> {
         if self.keys.contains(PAN) {
 
             // Pan target position along plane normal to camera direction
-            let dx = dx * self.settings.pan_speed;
-            let dy = dy * self.settings.pan_speed;
+            let dx = dx * self.settings.pan_speed*self.distance;
+            let dy = dy * self.settings.pan_speed*self.distance;
 
             let right = quaternion::rotate_vector(self.rotation, [_1, _0, _0]);
             let up = quaternion::rotate_vector(self.rotation, [_0, _1, _0]);
@@ -203,7 +212,15 @@ OrbitZoomCamera<T> {
         } else if self.keys.contains(ZOOM) {
 
             // Zoom to / from target
-            self.distance = self.distance + dy * self.settings.zoom_speed;
+            let new_dist = self.distance + dy * self.settings.zoom_speed*self.distance;
+            self.distance =
+                if new_dist > self.distance_far_limit {
+                    self.distance_far_limit
+                } else if new_dist < self.distance_near_limit {
+                    self.distance_near_limit
+                } else {
+                    new_dist
+                }
 
         } else {
 
