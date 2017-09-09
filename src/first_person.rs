@@ -41,7 +41,7 @@ pub struct FirstPersonSettings<T=f32> {
     /// This is measured in units per second.
     pub speed_vertical: T,
     /// The horizontal mouse sensitivity.
-    /// 
+    ///
     /// This is a multiplier applied to horizontal mouse movements.
     pub mouse_sensitivity_horizontal: T,
     /// The vertical mouse sensitivity.
